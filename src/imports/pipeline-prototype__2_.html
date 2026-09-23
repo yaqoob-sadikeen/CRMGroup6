@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Pipeline — CRM to Delivery</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B0E;
+    --bg-elevated:#101218;
+    --surface:#15171F;
+    --surface-2:#1B1E27;
+    --line:#262A35;
+    --line-soft:#1E212B;
+    --text:#F3F4F7;
+    --text-soft:#8B90A0;
+    --text-faint:#5A5F70;
+
+    --lime:#B4FF39;
+    --lime-dim:#8FE01A;
+    --ice:#3ED9FF;
+    --violet:#9D7BFF;
+
+    --danger:#FF5C72;
+    --danger-bg:rgba(255,92,114,0.12);
+    --warn:#FFB454;
+    --warn-bg:rgba(255,180,84,0.12);
+    --good:#4EE39A;
+    --good-bg:rgba(78,227,154,0.12);
+
+    --r-lg:18px;
+    --r-md:12px;
+    --r-sm:8px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:'Inter',ui-sans-serif,sans-serif;}
+  body{display:flex;font-size:14px;}
+  h1,h2,h3,h4{font-family:'Sora',sans-serif;letter-spacing:-0.01em;}
+  ::selection{background:var(--lime);color:#0A0B0E;}
+  :focus-visible{outline:2px solid var(--ice);outline-offset:2px;}
+  a{color:inherit;}
+
+  /* subtle grain/texture on the page background */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+    background:
+      radial-gradient(circle at 12% 8%, rgba(180,255,57,0.06), transparent 40%),
+      radial-gradient(circle at 88% 92%, rgba(62,217,255,0.05), transparent 40%);
+  }
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{width:248px;min-width:248px;background:var(--bg-elevated);color:#fff;display:flex;flex-direction:column;
+    height:100vh;position:sticky;top:0;border-right:1px solid var(--line-soft);z-index:2;}
+  .brand{display:flex;align-items:center;gap:11px;padding:24px 20px 20px;}
+  .brand .mark{width:30px;height:30px;border-radius:9px;flex:none;
+    background:linear-gradient(135deg,var(--lime),var(--ice));
+    box-shadow:0 0 24px rgba(180,255,57,0.35);}
+  .brand .name{font-family:'Sora',sans-serif;font-weight:800;font-size:17px;letter-spacing:-0.02em;}
+
+  .role-switch{margin:0 16px 18px;}
+  .role-switch label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--text-faint);margin-bottom:7px;font-weight:600;}
+  .select-wrap{position:relative;}
+  select#roleSelect{width:100%;appearance:none;background:var(--surface);color:#fff;border:1px solid var(--line);
+    border-radius:var(--r-sm);padding:10px 32px 10px 12px;font-size:13px;font-family:'Inter';cursor:pointer;}
+  .select-wrap::after{content:"";position:absolute;right:12px;top:50%;transform:translateY(-60%);
+    width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid var(--text-soft);pointer-events:none;}
+
+  nav{flex:1;padding:8px 12px;overflow-y:auto;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:var(--r-sm);color:var(--text-soft);
+    cursor:pointer;font-size:13.5px;font-weight:500;margin-bottom:2px;transition:background .12s,color .12s;}
+  .nav-item svg{width:17px;height:17px;flex:none;opacity:.8;}
+  .nav-item:hover{background:var(--surface);color:var(--text);}
+  .nav-item.active{background:var(--surface-2);color:var(--lime);}
+  .nav-item.active svg{opacity:1;stroke:var(--lime);}
+
+  .sidebar-foot{padding:16px 20px;border-top:1px solid var(--line-soft);display:flex;align-items:center;gap:11px;}
+  .avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--violet),var(--ice));
+    color:#0A0B0E;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;flex:none;font-family:'Sora';}
+  .who{line-height:1.3;}
+  .who .n{font-size:13px;font-weight:600;}
+  .who .r{font-size:11px;color:var(--text-faint);}
+
+  /* ---------- Main ---------- */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;z-index:1;}
+  .topbar{height:64px;background:rgba(10,11,14,0.7);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft);
+    display:flex;align-items:center;justify-content:space-between;padding:0 28px;position:sticky;top:0;z-index:5;}
+  .crumb{font-size:12.5px;color:var(--text-faint);letter-spacing:.01em;}
+  .crumb b{color:var(--text);font-weight:600;}
+  .top-actions{display:flex;align-items:center;gap:10px;}
+  .icon-btn{width:36px;height:36px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--surface);
+    display:flex;align-items:center;justify-content:center;color:var(--text-soft);cursor:pointer;transition:.12s;}
+  .icon-btn:hover{border-color:var(--ice);color:var(--ice);}
+  .icon-btn svg{width:16px;height:16px;}
+
+  .content{padding:32px 36px 60px;overflow-y:auto;}
+  .screen{display:none;}
+  .screen.active{display:block;animation:fade .18s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--lime);font-weight:700;margin-bottom:8px;}
+  h1.page-title{font-size:28px;margin:0 0 6px;font-weight:800;}
+  .page-sub{color:var(--text-soft);font-size:13.5px;margin:0 0 26px;}
+
+  .row-between{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+  .search{display:flex;align-items:center;gap:9px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
+    padding:9px 14px;min-width:270px;color:var(--text-faint);}
+  .search svg{width:15px;height:15px;flex:none;}
+  .search input{border:none;outline:none;font-size:13px;flex:1;background:transparent;color:var(--text);font-family:'Inter';}
+  .search input::placeholder{color:var(--text-faint);}
+
+  .btn{border:none;border-radius:var(--r-sm);padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;
+    display:inline-flex;align-items:center;gap:7px;font-family:'Inter';transition:.12s;}
+  .btn-primary{background:var(--lime);color:#0A0B0E;}
+  .btn-primary:hover{background:var(--lime-dim);box-shadow:0 0 20px rgba(180,255,57,0.25);}
+  .btn-ghost{background:var(--surface);border:1px solid var(--line);color:var(--text);}
+  .btn-ghost:hover{border-color:var(--text-soft);}
+  .btn-danger{background:var(--danger-bg);border:1px solid rgba(255,92,114,0.3);color:var(--danger);}
+  .btn-danger:hover{background:rgba(255,92,114,0.2);}
+  .btn-success{background:var(--good);color:#0A0B0E;}
+  .btn-success:hover{filter:brightness(1.1);}
+
+  /* ---- Hero stat (signature element) ---- */
+  .hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:32px 36px;
+    margin-bottom:26px;display:flex;align-items:flex-end;justify-content:space-between;gap:30px;flex-wrap:wrap;
+    position:relative;overflow:hidden;}
+  .hero::after{content:"";position:absolute;right:-60px;top:-60px;width:220px;height:220px;border-radius:50%;
+    background:radial-gradient(circle,rgba(180,255,57,0.14),transparent 70%);pointer-events:none;}
+  .hero-num{font-family:'Sora',sans-serif;font-weight:800;font-size:64px;line-height:1;letter-spacing:-0.03em;
+    background:linear-gradient(135deg,var(--lime),var(--ice));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .hero-label{color:var(--text-soft);font-size:13px;margin-top:10px;max-width:340px;}
+  .hero-side{display:flex;gap:28px;}
+  .hero-mini{text-align:right;}
+  .hero-mini .v{font-family:'Sora';font-weight:700;font-size:20px;}
+  .hero-mini .l{font-size:11px;color:var(--text-faint);margin-top:4px;text-transform:uppercase;letter-spacing:.06em;}
+
+  /* KPI cards */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px;}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:20px 22px;transition:.15s;}
+  .kpi:hover{border-color:var(--line-soft);transform:translateY(-2px);}
+  .kpi .label{font-size:11.5px;color:var(--text-faint);margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;}
+  .kpi .val{font-family:'Sora';font-size:28px;font-weight:700;}
+  .kpi .delta{font-size:12px;margin-top:8px;font-weight:600;}
+  .delta.up{color:var(--good);}
+  .delta.down{color:var(--warn);}
+
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);overflow:hidden;}
+  .panel + .panel{margin-top:20px;}
+  .panel-head{padding:18px 22px;border-bottom:1px solid var(--line-soft);font-weight:700;font-size:13.5px;
+    display:flex;justify-content:space-between;align-items:center;font-family:'Sora';}
+
+  .chart{display:flex;align-items:flex-end;gap:16px;height:190px;padding:24px;}
+  .bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:9px;}
+  .bar{width:100%;max-width:38px;border-radius:6px 6px 2px 2px;background:linear-gradient(180deg,var(--ice),var(--violet));
+    box-shadow:0 0 14px rgba(62,217,255,0.15);}
+  .bar-label{font-size:11px;color:var(--text-faint);font-weight:500;}
+
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--text-faint);
+    padding:14px 22px;border-bottom:1px solid var(--line-soft);font-weight:700;}
+  td{padding:15px 22px;border-bottom:1px solid var(--line-soft);font-size:13.5px;}
+  tbody tr{cursor:pointer;transition:background .1s;}
+  tbody tr:hover{background:var(--surface-2);}
+  tbody tr:last-child td{border-bottom:none;}
+  .cell-main{font-weight:600;}
+  .cell-sub{color:var(--text-faint);font-size:11.5px;margin-top:2px;}
+  .row-arrow{color:var(--text-faint);}
+  tbody tr:hover .row-arrow{color:var(--lime);}
+
+  .badge{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;padding:5px 11px;border-radius:100px;letter-spacing:.01em;}
+  .badge .dot{width:6px;height:6px;border-radius:50%;}
+  .badge.must{background:var(--danger-bg);color:var(--danger);}
+  .badge.must .dot{background:var(--danger);}
+  .badge.should{background:var(--warn-bg);color:var(--warn);}
+  .badge.should .dot{background:var(--warn);}
+  .badge.could{background:var(--good-bg);color:var(--good);}
+  .badge.could .dot{background:var(--good);}
+  .badge.neutral{background:var(--surface-2);color:var(--text-soft);}
+  .badge.neutral .dot{background:var(--text-faint);}
+
+  .detail-grid{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start;}
+  .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line-soft);padding:0 22px;}
+  .tab{padding:14px 6px;margin-right:22px;font-size:13px;color:var(--text-faint);cursor:pointer;
+    border-bottom:2px solid transparent;font-weight:600;}
+  .tab.active{color:var(--text);border-color:var(--lime);}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:14px 12px;padding:22px;font-size:13.5px;}
+  .kv .k{color:var(--text-faint);font-weight:500;}
+  .side-block{padding:20px 22px;border-bottom:1px solid var(--line-soft);}
+  .side-block:last-child{border-bottom:none;}
+  .side-title{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--text-faint);margin-bottom:12px;font-weight:700;}
+  .approve-row{display:flex;gap:8px;margin-top:4px;}
+  .step{display:flex;align-items:center;gap:11px;padding:9px 0;font-size:13px;}
+  .step .chk{width:20px;height:20px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;flex:none;font-weight:700;}
+  .step .chk.done{background:var(--good);color:#0A0B0E;}
+  .step .chk.pending{background:var(--surface-2);color:var(--text-faint);border:1px solid var(--line);}
+
+  .kanban{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+  .kcol{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-md);padding:14px;}
+  .kcol h4{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-faint);margin:6px 10px 14px;font-weight:700;}
+  .kcard{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:var(--r-sm);padding:14px;margin-bottom:10px;font-size:13px;
+    transition:.12s;}
+  .kcard:hover{border-color:var(--ice);}
+  .kcard .t{font-weight:600;margin-bottom:8px;}
+  .kcard .meta{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--text-faint);}
+
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<!-- ================= SIDEBAR ================= -->
+<div class="sidebar">
+  <div class="brand"><div class="mark"></div><div class="name">Pipeline</div></div>
+
+  <div class="role-switch">
+    <label>Viewing as</label>
+    <div class="select-wrap">
+      <select id="roleSelect" onchange="setRole(this.value)">
+        <option value="salesManager">Sales Manager</option>
+        <option value="salesRep">Sales Rep</option>
+        <option value="techLead">Tech Lead</option>
+        <option value="finance">Finance Officer</option>
+        <option value="admin">Admin</option>
+        <option value="pm">Project Manager</option>
+        <option value="team">Team Member</option>
+        <option value="exec">Executive</option>
+      </select>
+    </div>
+  </div>
+
+  <nav id="navList"></nav>
+
+  <div class="sidebar-foot">
+    <div class="avatar" id="avatarInit">SM</div>
+    <div class="who"><div class="n" id="whoName">Dinesha Silva</div><div class="r" id="whoRole">Sales Manager</div></div>
+  </div>
+</div>
+
+<!-- ================= MAIN ================= -->
+<div class="main">
+  <div class="topbar">
+    <div class="crumb">Pipeline / <b id="crumbLabel">Sales Dashboard</b></div>
+    <div class="top-actions">
+      <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+      <div class="icon-btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- ============ SALES DASHBOARD ============ -->
+    <section class="screen" id="screen-salesDash">
+      <div class="eyebrow">Live pipeline</div>
+      <h1 class="page-title">Sales Dashboard</h1>
+      <p class="page-sub">Everything moving through leads and deals, right now.</p>
+
+      <div class="hero">
+        <div>
+          <div class="hero-num">$1.4M</div>
+          <div class="hero-label">Total pipeline value across 42 active deals, up 18% from last month.</div>
+        </div>
+        <div class="hero-side">
+          <div class="hero-mini"><div class="v">128</div><div class="l">Open leads</div></div>
+          <div class="hero-mini"><div class="v">34%</div><div class="l">Conversion</div></div>
+          <div class="hero-mini"><div class="v">7</div><div class="l">Need approval</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">Deals by stage</div>
+        <div class="chart">
+          <div class="bar-wrap"><div class="bar" style="height:40%"></div><div class="bar-label">New</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:65%"></div><div class="bar-label">Qualifying</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:90%"></div><div class="bar-label">Assessment</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:55%"></div><div class="bar-label">Approval</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:30%"></div><div class="bar-label">Won</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ LEADS LIST ============ -->
+    <section class="screen" id="screen-leads">
+      <div class="eyebrow">Leads</div>
+      <h1 class="page-title">Leads</h1>
+      <p class="page-sub">Every lead currently being worked, filtered to your team.</p>
+      <div class="row-between">
+        <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Search leads..."></div>
+        <button class="btn btn-primary" onclick="showScreen('leadDetail')">+ New Lead</button>
+      </div>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Lead</th><th>Owner</th><th>Source</th><th>Status</th><th></th></tr></thead>
+          <tbody id="leadsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ LEAD DETAIL ============ -->
+    <section class="screen" id="screen-leadDetail">
+      <button class="btn btn-ghost" style="margin-bottom:16px" onclick="showScreen('leads')">← Back to Leads</button>
+      <div class="eyebrow">Lead</div>
+      <h1 class="page-title">Acme Robotics</h1>
+      <p class="page-sub">Owned by Nadeesha Perera · <span class="badge must"><span class="dot"></span>New</span></p>
+      <div class="detail-grid">
+        <div class="panel">
+          <div class="tabs">
+            <div class="tab active">Info</div>
+            <div class="tab">History</div>
+            <div class="tab">Documents</div>
+          </div>
+          <div class="kv">
+            <div class="k">Organization</div><div>Acme Robotics Pte Ltd</div>
+            <div class="k">Contact</div><div>Ruwan Jayasuriya, Head of Ops</div>
+            <div class="k">Source</div><div>Referral</div>
+            <div class="k">Est. value</div><div>$48,000</div>
+            <div class="k">Notes</div><div>Interested in a 6-month pilot before full rollout.</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="side-block">
+            <div class="side-title">Assign</div>
+            <button class="btn btn-ghost" style="width:100%">Assign to Sales Rep</button>
+          </div>
+          <div class="side-block">
+            <div class="side-title">Move forward</div>
+            <button class="btn btn-primary" style="width:100%" onclick="showScreen('dealDetail')">Convert to Deal</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ DEALS LIST ============ -->
+    <section class="screen" id="screen-deals">
+      <div class="eyebrow">Deals</div>
+      <h1 class="page-title">Deals</h1>
+      <p class="page-sub">Deals in progress, pending assessment, or awaiting approval.</p>
+      <div class="row-between">
+        <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Search deals..."></div>
+      </div>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Deal</th><th>Organization</th><th>Value</th><th>Stage</th><th></th></tr></thead>
+          <tbody id="dealsBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ DEAL DETAIL (approval spine) ============ -->
+    <section class="screen" id="screen-dealDetail">
+      <button class="btn btn-ghost" style="margin-bottom:16px" onclick="showScreen('deals')">← Back to Deals</button>
+      <div class="eyebrow">Deal</div>
+      <h1 class="page-title">Acme Robotics — Pilot Rollout</h1>
+      <p class="page-sub">$48,000 · <span class="badge should"><span class="dot"></span>Pending Assessment</span></p>
+      <div class="detail-grid">
+        <div class="panel">
+          <div class="tabs">
+            <div class="tab active">Overview</div>
+            <div class="tab">Technical Assessment</div>
+            <div class="tab">Financial Assessment</div>
+          </div>
+          <div class="kv">
+            <div class="k">Organization</div><div>Acme Robotics Pte Ltd</div>
+            <div class="k">Deal owner</div><div>Nadeesha Perera</div>
+            <div class="k">Requested by</div><div>Ruwan Jayasuriya</div>
+            <div class="k">Value</div><div>$48,000</div>
+            <div class="k">Target start</div><div>15 Sep 2026</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="side-block">
+            <div class="side-title">Approval progress</div>
+            <div class="step"><div class="chk done">✓</div> Technical assessment submitted</div>
+            <div class="step"><div class="chk pending">2</div> Financial assessment pending</div>
+            <div class="step"><div class="chk pending">3</div> Deal certificate signed</div>
+          </div>
+          <div class="side-block">
+            <div class="side-title">Decision</div>
+            <div class="approve-row">
+              <button class="btn btn-success" style="flex:1">Approve</button>
+              <button class="btn btn-danger" style="flex:1">Reject</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TECHNICAL ASSESSMENT (Tech Lead) ============ -->
+    <section class="screen" id="screen-techAssess">
+      <div class="eyebrow">Technical assessment</div>
+      <h1 class="page-title">Assessment Queue</h1>
+      <p class="page-sub">Deals waiting on a technical read before they can move to approval.</p>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Deal</th><th>Requested by</th><th>Requested on</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr onclick="showScreen('techAssessForm')">
+              <td><div class="cell-main">Acme Robotics — Pilot Rollout</div></td>
+              <td>Nadeesha Perera</td><td>12 Aug 2026</td>
+              <td><span class="badge must"><span class="dot"></span>Awaiting review</span></td><td class="row-arrow">→</td>
+            </tr>
+            <tr onclick="showScreen('techAssessForm')">
+              <td><div class="cell-main">Kandy Textiles — Phase 2</div></td>
+              <td>Ishara Fonseka</td><td>10 Aug 2026</td>
+              <td><span class="badge should"><span class="dot"></span>In progress</span></td><td class="row-arrow">→</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-techAssessForm">
+      <button class="btn btn-ghost" style="margin-bottom:16px" onclick="showScreen('techAssess')">← Back to Queue</button>
+      <div class="eyebrow">Technical assessment</div>
+      <h1 class="page-title">Acme Robotics</h1>
+      <p class="page-sub">Assess required skills and technical risk before this deal can be approved.</p>
+      <div class="detail-grid">
+        <div class="panel">
+          <div class="kv">
+            <div class="k">Required skills</div><div>Embedded systems, ROS2, Computer vision</div>
+            <div class="k">Identified risks</div><div>Hardware lead time may exceed the 6-week window.</div>
+            <div class="k">Comments</div><div>Feasible with 2 senior engineers and 1 contractor.</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="side-block">
+            <div class="side-title">Submit</div>
+            <button class="btn btn-primary" style="width:100%" onclick="showScreen('techAssess')">Submit Technical Assessment</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FINANCIAL ASSESSMENT (Finance) ============ -->
+    <section class="screen" id="screen-finAssess">
+      <div class="eyebrow">Financial assessment</div>
+      <h1 class="page-title">Assessment Queue</h1>
+      <p class="page-sub">Deals waiting on financial sign-off.</p>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Deal</th><th>Value</th><th>Requested on</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr onclick="showScreen('finAssessForm')">
+              <td><div class="cell-main">Acme Robotics — Pilot Rollout</div></td>
+              <td>$48,000</td><td>13 Aug 2026</td>
+              <td><span class="badge must"><span class="dot"></span>Awaiting review</span></td><td class="row-arrow">→</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="screen" id="screen-finAssessForm">
+      <button class="btn btn-ghost" style="margin-bottom:16px" onclick="showScreen('finAssess')">← Back to Queue</button>
+      <div class="eyebrow">Financial assessment</div>
+      <h1 class="page-title">Acme Robotics</h1>
+      <p class="page-sub">Confirm margin and payment terms before this deal can be approved.</p>
+      <div class="detail-grid">
+        <div class="panel">
+          <div class="kv">
+            <div class="k">Deal value</div><div>$48,000</div>
+            <div class="k">Est. margin</div><div>32%</div>
+            <div class="k">Payment terms</div><div>50% upfront, 50% on delivery</div>
+            <div class="k">Comments</div><div>Standard terms, within approved margin band.</div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="side-block">
+            <div class="side-title">Submit</div>
+            <button class="btn btn-primary" style="width:100%" onclick="showScreen('finAssess')">Submit Financial Assessment</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PROJECTS LIST ============ -->
+    <section class="screen" id="screen-projects">
+      <div class="eyebrow">Delivery</div>
+      <h1 class="page-title">Projects</h1>
+      <p class="page-sub">Projects created from won deals.</p>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Project</th><th>Client</th><th>Status</th><th>Deadline</th><th></th></tr></thead>
+          <tbody>
+            <tr onclick="showScreen('projectDetail')">
+              <td><div class="cell-main">Acme Robotics Pilot</div><div class="cell-sub">PM: Kavindu Rathnayake</div></td>
+              <td>Acme Robotics</td>
+              <td><span class="badge could"><span class="dot"></span>On track</span></td>
+              <td>15 Nov 2026</td><td class="row-arrow">→</td>
+            </tr>
+            <tr onclick="showScreen('projectDetail')">
+              <td><div class="cell-main">Kandy Textiles Phase 2</div><div class="cell-sub">PM: Kavindu Rathnayake</div></td>
+              <td>Kandy Textiles</td>
+              <td><span class="badge should"><span class="dot"></span>At risk</span></td>
+              <td>02 Oct 2026</td><td class="row-arrow">→</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ PROJECT DETAIL / TASK BOARD ============ -->
+    <section class="screen" id="screen-projectDetail">
+      <button class="btn btn-ghost" style="margin-bottom:16px" onclick="showScreen('projects')">← Back to Projects</button>
+      <div class="eyebrow">Project</div>
+      <h1 class="page-title">Acme Robotics Pilot</h1>
+      <p class="page-sub"><span class="badge could"><span class="dot"></span>On track</span> · Deadline 15 Nov 2026</p>
+      <div class="kanban">
+        <div class="kcol"><h4>To do</h4>
+          <div class="kcard"><div class="t">Order sensor hardware</div><div class="meta"><span>Ishara F.</span><span class="badge must"><span class="dot"></span>Must</span></div></div>
+          <div class="kcard"><div class="t">Draft integration test plan</div><div class="meta"><span>Sahan W.</span><span class="badge should"><span class="dot"></span>Should</span></div></div>
+        </div>
+        <div class="kcol"><h4>In progress</h4>
+          <div class="kcard"><div class="t">Set up ROS2 base image</div><div class="meta"><span>Sahan W.</span><span class="badge must"><span class="dot"></span>Must</span></div></div>
+        </div>
+        <div class="kcol"><h4>Done</h4>
+          <div class="kcard"><div class="t">Kickoff call with client</div><div class="meta"><span>Kavindu R.</span><span class="badge could"><span class="dot"></span>Could</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ADMIN — USERS ============ -->
+    <section class="screen" id="screen-users">
+      <div class="eyebrow">Admin</div>
+      <h1 class="page-title">Users</h1>
+      <p class="page-sub">Everyone with access, and what role they hold.</p>
+      <div class="row-between">
+        <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg><input placeholder="Search users..."></div>
+        <button class="btn btn-primary">+ Create User</button>
+      </div>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><div class="cell-main">Dinesha Silva</div></td><td>dinesha@pipeline.io</td><td>Sales Manager</td><td><span class="badge could"><span class="dot"></span>Active</span></td><td>⋯</td></tr>
+            <tr><td><div class="cell-main">Nadeesha Perera</div></td><td>nadeesha@pipeline.io</td><td>Sales Rep</td><td><span class="badge could"><span class="dot"></span>Active</span></td><td>⋯</td></tr>
+            <tr><td><div class="cell-main">Sahan Wickramasinghe</div></td><td>sahan@pipeline.io</td><td>Tech Lead</td><td><span class="badge could"><span class="dot"></span>Active</span></td><td>⋯</td></tr>
+            <tr><td><div class="cell-main">Amali Gunasekara</div></td><td>amali@pipeline.io</td><td>Finance Officer</td><td><span class="badge neutral"><span class="dot"></span>Invited</span></td><td>⋯</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ============ EXECUTIVE DASHBOARD ============ -->
+    <section class="screen" id="screen-execDash">
+      <div class="eyebrow">Company-wide</div>
+      <h1 class="page-title">Executive Dashboard</h1>
+      <p class="page-sub">Pipeline and delivery health, in one view.</p>
+
+      <div class="hero">
+        <div>
+          <div class="hero-num">61%</div>
+          <div class="hero-label">Deal win rate this quarter, up 4 points from last quarter.</div>
+        </div>
+        <div class="hero-side">
+          <div class="hero-mini"><div class="v">18d</div><div class="l">Avg. cycle</div></div>
+          <div class="hero-mini"><div class="v">14</div><div class="l">Active projects</div></div>
+          <div class="hero-mini"><div class="v">2</div><div class="l">At risk</div></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">Lead conversion by month</div>
+        <div class="chart">
+          <div class="bar-wrap"><div class="bar" style="height:35%"></div><div class="bar-label">Mar</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:50%"></div><div class="bar-label">Apr</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:45%"></div><div class="bar-label">May</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:70%"></div><div class="bar-label">Jun</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:60%"></div><div class="bar-label">Jul</div></div>
+          <div class="bar-wrap"><div class="bar" style="height:82%"></div><div class="bar-label">Aug</div></div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<script>
+const leads = [
+  ["Acme Robotics","Nadeesha Perera","Referral","New","must"],
+  ["Kandy Textiles","Ishara Fonseka","Website","Contacted","should"],
+  ["Galle Freight Co.","Nadeesha Perera","Cold outreach","New","must"],
+  ["Horizon Retail","Ishara Fonseka","Referral","Qualified","could"],
+];
+const deals = [
+  ["Acme Robotics — Pilot Rollout","Acme Robotics","$48,000","Pending Assessment","should"],
+  ["Kandy Textiles — Phase 2","Kandy Textiles","$112,000","Awaiting Approval","must"],
+  ["Horizon Retail — POS Refresh","Horizon Retail","$29,500","Won","could"],
+];
+
+function fillTables(){
+  document.getElementById('leadsBody').innerHTML = leads.map(l=>`
+    <tr onclick="showScreen('leadDetail')">
+      <td><div class="cell-main">${l[0]}</div><div class="cell-sub">Est. value $${(Math.random()*50+10|0)}k</div></td>
+      <td>${l[1]}</td><td>${l[2]}</td>
+      <td><span class="badge ${l[4]}"><span class="dot"></span>${l[3]}</span></td><td class="row-arrow">→</td>
+    </tr>`).join('');
+  document.getElementById('dealsBody').innerHTML = deals.map(d=>`
+    <tr onclick="showScreen('dealDetail')">
+      <td><div class="cell-main">${d[0]}</div></td>
+      <td>${d[1]}</td><td>${d[2]}</td>
+      <td><span class="badge ${d[4]}"><span class="dot"></span>${d[3]}</span></td><td class="row-arrow">→</td>
+    </tr>`).join('');
+}
+
+/* icon paths per nav key */
+const icons = {
+  dashboard:'<path d="M3 12h4v9H3zM10 3h4v18h-4zM17 8h4v13h-4z"/>',
+  leads:'<circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/><path d="M16 4.5c1.7.4 3 2 3 3.9s-1.3 3.5-3 3.9"/><path d="M22 20c0-2.8-1.8-5.1-4.3-6.2"/>',
+  deals:'<path d="m12 2 2.4 5.5L20 8l-4 4.2 1 5.8-5-3-5 3 1-5.8L4 8l5.6-.5z"/>',
+  assess:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 3v2h6V3M9 11l2 2 4-4M9 16h6"/>',
+  projects:'<path d="M3 7h18v13H3z"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  users:'<circle cx="9" cy="7" r="4"/><path d="M2 21v-1a7 7 0 0 1 14 0v1"/><path d="M17 5.5c1.5.6 2.5 2 2.5 3.7s-1 3.1-2.5 3.7"/><path d="M22 21v-1a6 6 0 0 0-3.5-5.5"/>',
+  exec:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>',
+};
+
+const roles = {
+  salesManager:{ label:"Sales Manager", initials:"SM", name:"Dinesha Silva",
+    nav:[["salesDash","Dashboard","dashboard"],["leads","Leads","leads"],["deals","Deals","deals"]] },
+  salesRep:{ label:"Sales Rep", initials:"NP", name:"Nadeesha Perera",
+    nav:[["leads","My Leads","leads"],["deals","My Deals","deals"]] },
+  techLead:{ label:"Tech Lead", initials:"SW", name:"Sahan Wickramasinghe",
+    nav:[["techAssess","Assessment Queue","assess"]] },
+  finance:{ label:"Finance Officer", initials:"AG", name:"Amali Gunasekara",
+    nav:[["finAssess","Assessment Queue","assess"]] },
+  admin:{ label:"Admin", initials:"AD", name:"Ravindu Bandara",
+    nav:[["users","Users","users"]] },
+  pm:{ label:"Project Manager", initials:"KR", name:"Kavindu Rathnayake",
+    nav:[["projects","Projects","projects"]] },
+  team:{ label:"Team Member", initials:"TW", name:"Tharindu Weerasinghe",
+    nav:[["projects","My Projects","projects"]] },
+  exec:{ label:"Executive", initials:"EX", name:"Priyanka Mendis",
+    nav:[["execDash","Executive Dashboard","exec"]] },
+};
+
+function setRole(key){
+  const r = roles[key];
+  document.getElementById('avatarInit').textContent = r.initials;
+  document.getElementById('whoName').textContent = r.name;
+  document.getElementById('whoRole').textContent = r.label;
+  const navEl = document.getElementById('navList');
+  navEl.innerHTML = r.nav.map((n,i)=>
+    `<div class="nav-item ${i===0?'active':''}" onclick="selectNav(this,'${n[0]}')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${icons[n[2]]}</svg>
+      ${n[1]}
+    </div>`
+  ).join('');
+  showScreen(r.nav[0][0]);
+}
+
+function selectNav(el, screenId){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+  showScreen(screenId);
+}
+
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const target = document.getElementById('screen-'+id);
+  if(target) target.classList.add('active');
+  const labelMap = {
+    salesDash:"Sales Dashboard", leads:"Leads", leadDetail:"Lead Detail",
+    deals:"Deals", dealDetail:"Deal Detail", techAssess:"Assessment Queue",
+    techAssessForm:"Technical Assessment", finAssess:"Assessment Queue",
+    finAssessForm:"Financial Assessment", projects:"Projects",
+    projectDetail:"Project Detail", users:"Users", execDash:"Executive Dashboard"
+  };
+  document.getElementById('crumbLabel').textContent = labelMap[id] || id;
+}
+
+fillTables();
+setRole('salesManager');
+</script>
+</body>
+</html>
